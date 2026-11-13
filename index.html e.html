@@ -1,0 +1,1997 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXFLOR × Floristería El Trigal | Presentación Interactiva 3D</title>
+  <!-- Motor Three.js r128 con respaldo automático a motor 3D Canvas nativo -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    /* ==========================================================================
+       SISTEMA DE DISEÑO BOTÁNICO OSCURO DE LUJO (100% AUTOCONTENIDO)
+       ========================================================================== */
+    :root {
+      --bg-deep: #07110d;
+      --bg-elevated: rgba(11, 26, 20, 0.80);
+      --bg-card: rgba(13, 31, 24, 0.84);
+      --bg-card-soft: rgba(20, 45, 35, 0.58);
+      --border-subtle: rgba(16, 185, 129, 0.24);
+      --border-gold: rgba(245, 158, 11, 0.38);
+      --emerald: #10b981;
+      --emerald-light: #34d399;
+      --emerald-dark: #059669;
+      --gold: #f59e0b;
+      --gold-light: #fbbf24;
+      --cyan: #38bdf8;
+      --danger: #ef4444;
+      --text-main: #f3faf6;
+      --text-muted: #a7c4b5;
+      --text-dim: #739484;
+      --shadow-glow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 32px rgba(16, 185, 129, 0.12);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-deep);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Fondo atmosférico botánico */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 78% 28%, rgba(16, 185, 129, 0.14) 0%, transparent 45%),
+        radial-gradient(circle at 22% 82%, rgba(245, 158, 11, 0.10) 0%, transparent 42%),
+        radial-gradient(circle at 65% 75%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+        linear-gradient(145deg, #050d0a 0%, #07110d 55%, #0a1913 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Lienzo 3D Interactivo a Pantalla Completa */
+    #scene-container {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #scene-container:active {
+      cursor: grabbing;
+    }
+
+    #scene-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ==========================================================================
+       BANNER / MODAL FLOTANTE INICIAL DE PANTALLA COMPLETA
+       ========================================================================== */
+    .fs-welcome-banner {
+      position: fixed;
+      top: 76px;
+      left: 50%;
+      transform: translateX(-50%) translateY(0);
+      z-index: 120;
+      width: min(94%, 640px);
+      background: linear-gradient(135deg, rgba(10, 28, 21, 0.96), rgba(16, 40, 30, 0.94));
+      border: 1px solid var(--border-gold);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.78), 0 0 30px rgba(245, 158, 11, 0.18);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: var(--radius-lg);
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    .fs-welcome-banner.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(-20px);
+    }
+
+    .fs-banner-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .fs-banner-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .fs-badge-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(16, 185, 129, 0.22));
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      color: var(--gold-light);
+      flex-shrink: 0;
+    }
+
+    .fs-banner-title {
+      font-size: 1.04rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.25;
+    }
+
+    .fs-banner-sub {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .fs-banner-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Toast de respaldo para F11 o notificaciones */
+    .toast-notice {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      z-index: 150;
+      background: rgba(11, 28, 22, 0.96);
+      border: 1px solid var(--gold);
+      color: var(--text-main);
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(14px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      text-align: center;
+      max-width: 92vw;
+    }
+
+    .toast-notice.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ==========================================================================
+       BARRA SUPERIOR FIJA DE NAVEGACIÓN
+       ========================================================================== */
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      min-height: 64px;
+      padding: 10px 20px;
+      background: rgba(7, 17, 13, 0.86);
+      border-bottom: 1px solid var(--border-subtle);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--emerald), var(--gold));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #04100b;
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title {
+      font-size: 0.98rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      color: var(--text-main);
+    }
+
+    .brand-title span {
+      color: var(--gold-light);
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* Píldoras de Diapositivas #1 a #8 */
+    .slide-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .slide-pill {
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      background: rgba(16, 38, 29, 0.65);
+      color: var(--text-muted);
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .slide-pill:hover {
+      border-color: var(--emerald);
+      color: var(--text-main);
+      transform: translateY(-1px);
+    }
+
+    .slide-pill.active {
+      background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
+      color: #03110b;
+      border-color: var(--emerald-light);
+      font-weight: 800;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Controles derechos de la barra */
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Botones reutilizables */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 9px 15px;
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: var(--transition);
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
+      color: #03120b;
+      font-weight: 700;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #160d02;
+      font-weight: 700;
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.28);
+    }
+
+    .btn-gold:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: rgba(18, 42, 33, 0.72);
+      color: var(--text-main);
+      border-color: var(--border-subtle);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(25, 58, 45, 0.9);
+      border-color: var(--emerald);
+    }
+
+    .btn-sm {
+      padding: 7px 12px;
+      font-size: 0.79rem;
+    }
+
+    /* ==========================================================================
+       CONTENEDOR PRINCIPAL DE DIAPOSITIVAS
+       ========================================================================== */
+    .stage {
+      position: relative;
+      z-index: 10;
+      min-height: 100vh;
+      padding: 84px 24px 80px;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .slide-panel {
+      width: 100%;
+      max-width: 630px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 26px 28px;
+      box-shadow: var(--shadow-glow);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      pointer-events: auto;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      max-height: calc(100vh - 156px);
+      overflow-y: auto;
+    }
+
+    /* Barra de desplazamiento elegante dentro del panel */
+    .slide-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    .slide-panel::-webkit-scrollbar-track {
+      background: rgba(7, 17, 13, 0.4);
+      border-radius: 10px;
+    }
+    .slide-panel::-webkit-scrollbar-thumb {
+      background: rgba(16, 185, 129, 0.35);
+      border-radius: 10px;
+    }
+
+    /* Modo Explorar 3D: oculta paneles para ver e interactuar libremente con la escena */
+    body.explore-3d-mode .slide-panel {
+      opacity: 0;
+      transform: translateX(-35px);
+      pointer-events: none;
+    }
+
+    .explore-hint {
+      position: fixed;
+      bottom: 78px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 90;
+      background: rgba(9, 24, 18, 0.88);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 9px 18px;
+      border-radius: 999px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      display: none;
+      backdrop-filter: blur(12px);
+      pointer-events: none;
+    }
+
+    body.explore-3d-mode .explore-hint {
+      display: block;
+    }
+
+    /* Tipografía y etiquetas internas de diapositivas */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.34);
+      color: var(--emerald-light);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .eyebrow.gold {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.36);
+      color: var(--gold-light);
+    }
+
+    .eyebrow.cyan {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: rgba(56, 189, 248, 0.36);
+      color: var(--cyan);
+    }
+
+    h1.slide-title {
+      font-size: clamp(1.55rem, 2.5vw, 2.05rem);
+      font-weight: 800;
+      line-height: 1.18;
+      margin-bottom: 10px;
+      color: var(--text-main);
+    }
+
+    h1.slide-title span {
+      background: linear-gradient(90deg, var(--emerald-light), var(--gold-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.slide-lead {
+      font-size: 0.94rem;
+      line-height: 1.58;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+
+    /* Cuadrículas y tarjetas internas */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric-box {
+      background: var(--bg-card-soft);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: var(--radius-md);
+      padding: 13px 14px;
+    }
+
+    .metric-val {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--gold-light);
+      margin-bottom: 2px;
+    }
+
+    .metric-val.emerald { color: var(--emerald-light); }
+    .metric-val.cyan { color: var(--cyan); }
+
+    .metric-lbl {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    /* Pestañas interactivas */
+    .tab-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(16, 38, 29, 0.72);
+      border: 1px solid rgba(16, 185, 129, 0.24);
+      color: var(--text-muted);
+      font-size: 0.81rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      border-color: var(--emerald);
+    }
+
+    .tab-btn.active {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: var(--emerald-light);
+      color: var(--text-main);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.2);
+    }
+
+    .detail-card {
+      background: rgba(9, 23, 18, 0.76);
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .detail-card h3 {
+      font-size: 1.02rem;
+      color: var(--gold-light);
+      margin-bottom: 6px;
+    }
+
+    .detail-card p {
+      font-size: 0.87rem;
+      line-height: 1.55;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .bullet-list li {
+      font-size: 0.84rem;
+      color: var(--text-main);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.4;
+    }
+
+    .bullet-list li::before {
+      content: "✦";
+      color: var(--emerald-light);
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    /* Simulador Biométrico (Diapositiva 4) */
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--cyan), var(--emerald-light));
+      border-radius: 999px;
+      transition: width 0.12s linear;
+    }
+
+    .epp-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .epp-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      background: rgba(16, 185, 129, 0.16);
+      color: var(--emerald-light);
+      transition: var(--transition);
+    }
+
+    .epp-chip.missing {
+      border-color: rgba(239, 68, 68, 0.45);
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+    }
+
+    /* Checklist & Quiz (Diapositiva 5) */
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(15, 36, 28, 0.72);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-size: 0.84rem;
+      transition: var(--transition);
+    }
+
+    .check-item.done {
+      border-color: var(--emerald);
+      background: rgba(16, 185, 129, 0.16);
+    }
+
+    .quiz-option {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 9px 13px;
+      margin-bottom: 7px;
+      border-radius: var(--radius-sm);
+      background: rgba(17, 40, 31, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      color: var(--text-main);
+      font-size: 0.83rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .quiz-option:hover {
+      border-color: var(--cyan);
+    }
+
+    .quiz-option.correct {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: var(--emerald-light);
+      color: #ecfdf5;
+      font-weight: 600;
+    }
+
+    .quiz-option.wrong {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: var(--danger);
+      color: #fecaca;
+    }
+
+    /* Slider Postura (Diapositiva 6) */
+    .range-input {
+      width: 100%;
+      accent-color: var(--emerald);
+      cursor: pointer;
+      height: 8px;
+      margin: 10px 0;
+    }
+
+    .posture-flex {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(9, 22, 17, 0.78);
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-top: 10px;
+    }
+
+    /* Equipo y créditos (Diapositiva 8) */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .team-card {
+      background: rgba(16, 39, 30, 0.76);
+      border: 1px solid rgba(245, 158, 11, 0.28);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .team-name {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .team-role {
+      font-size: 0.75rem;
+      color: var(--gold-light);
+      margin-top: 2px;
+    }
+
+    /* Barra inferior de navegación rápida */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 95;
+      height: 58px;
+      padding: 0 22px;
+      background: rgba(7, 17, 13, 0.84);
+      border-top: 1px solid var(--border-subtle);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .status-3d {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald-light);
+      box-shadow: 0 0 10px var(--emerald-light);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.6; }
+    }
+
+    .nav-arrows {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slide-counter {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      min-width: 56px;
+      text-align: center;
+    }
+
+    /* Adaptabilidad móvil y pantallas medianas */
+    @media (max-width: 820px) {
+      .topbar {
+        padding: 8px 12px;
+      }
+      .brand-sub {
+        display: none;
+      }
+      .stage {
+        padding: 112px 12px 72px;
+        align-items: flex-end;
+      }
+      .slide-panel {
+        max-width: 100%;
+        padding: 18px 16px;
+        max-height: 62vh;
+      }
+      .grid-2, .team-grid {
+        grid-template-columns: 1fr;
+      }
+      .fs-welcome-banner {
+        top: 108px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Escena 3D Interactiva (Three.js + Respaldo Canvas 3D Nativo) -->
+  <div id="scene-container" title="Arrastra para rotar el modelo 3D • Rueda para acercar"></div>
+
+  <!-- Banner / Modal Flotante Inicial de Pantalla Completa -->
+  <div id="fs-welcome-banner" class="fs-welcome-banner" role="dialog" aria-labelledby="fs-banner-heading">
+    <div class="fs-banner-top">
+      <div class="fs-banner-title-wrap">
+        <div class="fs-badge-icon">⛶</div>
+        <div>
+          <div id="fs-banner-heading" class="fs-banner-title">¿Listo para presentar en Floristería El Trigal?</div>
+          <div class="fs-banner-sub">Activa el modo inmersivo sin distracciones o presiona la tecla <strong>F</strong> en cualquier momento.</div>
+        </div>
+      </div>
+    </div>
+    <div class="fs-banner-actions">
+      <button id="btn-fs-banner-activate" class="btn btn-gold">⛶ Activar Pantalla Completa</button>
+      <button id="btn-fs-banner-dismiss" class="btn btn-ghost">Continuar en ventana normal</button>
+    </div>
+  </div>
+
+  <!-- Notificación Toast de Respaldo -->
+  <div id="toast-notice" class="toast-notice" role="status"></div>
+
+  <!-- Barra Superior Fija -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">NF</div>
+      <div class="brand-text">
+        <div class="brand-title">NEXFLOR <span>× El Trigal</span></div>
+        <div class="brand-sub">El Carmen de Viboral, Antioquia • Plataforma 3D</div>
+      </div>
+    </div>
+
+    <nav class="slide-nav" aria-label="Navegación de diapositivas">
+      <button class="slide-pill active" data-slide="0">#1 Inicio</button>
+      <button class="slide-pill" data-slide="1">#2 El Trigal</button>
+      <button class="slide-pill" data-slide="2">#3 Valor</button>
+      <button class="slide-pill" data-slide="3">#4 NEXFLOR ID</button>
+      <button class="slide-pill" data-slide="4">#5 Academy</button>
+      <button class="slide-pill" data-slide="5">#6 Posture</button>
+      <button class="slide-pill" data-slide="6">#7 Ingeniería</button>
+      <button class="slide-pill" data-slide="7">#8 Ruta &amp; Equipo</button>
+    </nav>
+
+    <div class="topbar-controls">
+      <button id="btn-explore-3d" class="btn btn-ghost btn-sm" title="Ocultar paneles para explorar la escena 3D">
+        👁 Explorar 3D (Ocultar Paneles)
+      </button>
+      <button id="btn-fs-topbar" class="btn btn-gold btn-sm" title="Alternar Pantalla Completa (Tecla F)">
+        ⛶ Pantalla Completa
+      </button>
+    </div>
+  </header>
+
+  <!-- Indicador flotante cuando los paneles están ocultos -->
+  <div id="explore-hint" class="explore-hint">
+    Modo Exploración 3D activo • Arrastra con el ratón para rotar la escultura
+  </div>
+
+  <!-- Contenedor Principal de las 8 Diapositivas -->
+  <main class="stage">
+    <section id="slide-panel" class="slide-panel" aria-live="polite">
+      <!-- El contenido dinámico de cada diapositiva se renderiza aquí -->
+    </section>
+  </main>
+
+  <!-- Barra Inferior de Control -->
+  <footer class="bottom-bar">
+    <div class="status-3d">
+      <span class="pulse-dot"></span>
+      <span id="engine-status-label">Motor 3D Interactivo Activo • Arrastra para rotar</span>
+    </div>
+
+    <div class="nav-arrows">
+      <button id="btn-prev" class="btn btn-ghost btn-sm" title="Diapositiva anterior (Flecha Izquierda)">← Anterior</button>
+      <span id="slide-counter" class="slide-counter">1 / 8</span>
+      <button id="btn-next" class="btn btn-primary btn-sm" title="Siguiente diapositiva (Flecha Derecha)">Siguiente →</button>
+    </div>
+  </footer>
+
+  <script>
+    /* ==========================================================================
+       1. GESTIÓN DE PANTALLA COMPLETA (API NATIVA + ATAJO TECLA F + RESPALDO F11)
+       ========================================================================== */
+    const fsBanner = document.getElementById("fs-welcome-banner");
+    const btnFsBannerActivate = document.getElementById("btn-fs-banner-activate");
+    const btnFsBannerDismiss = document.getElementById("btn-fs-banner-dismiss");
+    const btnFsTopbar = document.getElementById("btn-fs-topbar");
+    const toastNotice = document.getElementById("toast-notice");
+    let toastTimer = null;
+
+    function showToast(message, duration = 4500) {
+      toastNotice.textContent = message;
+      toastNotice.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastNotice.classList.remove("show");
+      }, duration);
+    }
+
+    function isFullscreenActive() {
+      return Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.msFullscreenElement
+      );
+    }
+
+    function updateFullscreenUI() {
+      const active = isFullscreenActive();
+      if (active) {
+        btnFsTopbar.innerHTML = "✕ Salir Pantalla Completa";
+        btnFsTopbar.classList.remove("btn-gold");
+        btnFsTopbar.classList.add("btn-ghost");
+        fsBanner.classList.add("hidden");
+      } else {
+        btnFsTopbar.innerHTML = "⛶ Pantalla Completa";
+        btnFsTopbar.classList.remove("btn-ghost");
+        btnFsTopbar.classList.add("btn-gold");
+      }
+    }
+
+    async function requestAppFullscreen() {
+      const elem = document.documentElement;
+      try {
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          await elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+          await elem.msRequestFullscreen();
+        } else {
+          showToast("Si el navegador bloquea el modo automático, presiona F11");
+          return;
+        }
+        fsBanner.classList.add("hidden");
+      } catch (err) {
+        showToast("Si el navegador bloquea el modo automático, presiona F11");
+      }
+    }
+
+    async function exitAppFullscreen() {
+      try {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          await document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          await document.msExitFullscreen();
+        }
+      } catch (err) {
+        showToast("Presiona Esc o F11 para salir de pantalla completa");
+      }
+    }
+
+    function toggleFullscreen() {
+      if (isFullscreenActive()) {
+        exitAppFullscreen();
+      } else {
+        requestAppFullscreen();
+      }
+    }
+
+    btnFsBannerActivate.addEventListener("click", requestAppFullscreen);
+    btnFsBannerDismiss.addEventListener("click", () => {
+      fsBanner.classList.add("hidden");
+    });
+    btnFsTopbar.addEventListener("click", toggleFullscreen);
+
+    ["fullscreenchange", "webkitfullscreenchange", "msfullscreenchange"].forEach((evt) => {
+      document.addEventListener(evt, updateFullscreenUI);
+    });
+
+    /* ==========================================================================
+       2. ESTADO INTERACTIVO DE LAS 8 DIAPOSITIVAS EN ESPAÑOL
+       ========================================================================== */
+    const state = {
+      currentSlide: 0,
+      explore3D: false,
+      // Diapositiva 2: Áreas de Floristería El Trigal
+      trigalArea: 0,
+      // Diapositiva 3: Perfiles de Valor
+      personaIndex: 0,
+      // Diapositiva 4: Simulador Biométrico NEXFLOR ID
+      scanning: false,
+      scanProgress: 0,
+      scanCompleted: false,
+      epp: {
+        guantes: true,
+        delantal: true,
+        gafas: true
+      },
+      // Diapositiva 5: NEXFLOR ACADEMY (Checklist + Reto de 3 preguntas)
+      academyModules: [true, true, false, false],
+      quizAnswers: [null, null, null],
+      // Diapositiva 6: NEXFLOR POSTURE (Ángulo lumbar 0° - 45°)
+      lumbarAngle: 12,
+      // Diapositiva 7: Capas de Arquitectura e Ingeniería
+      archLayer: 0
+    };
+
+    const trigalAreasData = [
+      {
+        title: "1. Cultivo y Poscosecha Tecnificada",
+        desc: "Recepción, hidratación, clasificación por longitud de tallo y conservación en cadena de frío en El Carmen de Viboral.",
+        bullets: [
+          "Control de hidratación y punto de corte para exportación y mercado nacional.",
+          "Reducción de fatiga física en mesas de clasificación mediante monitoreo postural.",
+          "Registro ágil de ingreso del personal sin contacto manual en cuartos fríos."
+        ]
+      },
+      {
+        title: "2. Diseño Floral y Ramos Artesanales",
+        desc: "Composición artística de arreglos florales combinando variedad botánica antioqueña con identidad estética única.",
+        bullets: [
+          "Microcápsulas visuales de estándares de armado y combinación cromática.",
+          "Verificación rápida de uso de guantes protectores frente a espinas y savia.",
+          "Trazabilidad de tiempos y productividad por línea creativa."
+        ]
+      },
+      {
+        title: "3. Cerámica Artesanal y Empaque",
+        desc: "Integración de la tradición ceramista de El Carmen de Viboral con empaques de protección ecológica y exportación.",
+        bullets: [
+          "Protocolos ergonómicos para levantamiento y embalaje de piezas cerámicas.",
+          "Guías interactivas de empaque seguro para evitar averías en transporte.",
+          "Sello de origen y calidad artesanal verificado en cada lote."
+        ]
+      },
+      {
+        title: "4. Calidad y Despacho Logístico",
+        desc: "Inspección fitosanitaria final, etiquetado inteligente y coordinación de entregas puntuales.",
+        bullets: [
+          "Tablero gerencial en tiempo real sobre cumplimiento operativo y bienestar.",
+          "Verificación inmediata de protocolos de bioseguridad antes del despacho.",
+          "Indicadores claros para auditorías de calidad y clientes institucionales."
+        ]
+      }
+    ];
+
+    const personasData = [
+      {
+        role: "Trabajadores y Floristas",
+        badge: "Bienestar y Agilidad Diaria",
+        summary: "Tecnología pensada para cuidar la salud física del equipo sin interrumpir su oficio artesanal.",
+        flow: [
+          "Ingreso manos libres en menos de 0.8 segundos al iniciar turno.",
+          "Alertas preventivas suaves si la inclinación lumbar supera los 25°.",
+          "Cápsulas de aprendizaje de 2 minutos desde cualquier dispositivo."
+        ]
+      },
+      {
+        role: "Ingenieros y Área Técnica",
+        badge: "Control Operativo y Edge AI",
+        summary: "Arquitectura modular que procesa visión artificial localmente con baja latencia y alta confiabilidad.",
+        flow: [
+          "Detección de EPP (guantes, delantal, gafas) en tiempo real sin hardware costoso.",
+          "Operación resiliente incluso ante intermitencias de internet rural.",
+          "Métricas técnicas exportables sobre ergonomía y cumplimiento por estación."
+        ]
+      },
+      {
+        role: "Directivos y Visitantes",
+        badge: "Innovación y Sostenibilidad",
+        summary: "Proyección de Floristería El Trigal como referente de transformación digital humanizada en Antioquia.",
+        flow: [
+          "Reducción de ausentismo por lesiones osteomusculares y lumbalgias.",
+          "Estandarización de calidad en cada ramo y pieza artesanal entregada.",
+          "Vitrina tecnológica de alto impacto para aliados y visitantes."
+        ]
+      }
+    ];
+
+    const quizQuestions = [
+      {
+        q: "1. ¿Cuál es el tiempo objetivo de reconocimiento facial y EPP en NEXFLOR ID?",
+        options: ["Menos de 0.8 segundos", "Entre 5 y 8 segundos", "Requiere huella dactilar física"],
+        correct: 0
+      },
+      {
+        q: "2. ¿A partir de qué ángulo de inclinación lumbar NEXFLOR POSTURE emite alerta preventiva?",
+        options: ["Desde 5 grados", "A partir de 25 grados sostenidos", "Solo a 90 grados"],
+        correct: 1
+      },
+      {
+        q: "3. ¿Qué ventaja ofrece el procesamiento Edge de NEXFLOR en El Carmen de Viboral?",
+        options: ["Depende 100% de servidores extranjeros", "Funciona localmente con privacidad cifrada y baja latencia", "Solo opera de noche"],
+        correct: 1
+      }
+    ];
+
+    const archLayersData = [
+      {
+        title: "Capa 1: Visión Artificial (MediaPipe & TensorFlow)",
+        specs: "30 FPS • 468 Puntos Faciales • 33 Puntos Esqueléticos",
+        desc: "Modelos ligeros de estimación de malla facial, detección de elementos de protección personal y cálculo trigonométrico de ángulos posturales en tiempo real."
+      },
+      {
+        title: "Capa 2: Procesamiento Edge y Modo Offline",
+        specs: "Latencia < 35 ms • Sincronización Diferida",
+        desc: "Ejecución directa en estaciones locales del taller o invernadero, garantizando continuidad operativa sin depender de ancho de banda constante."
+      },
+      {
+        title: "Capa 3: Privacidad Biométrica Cifrada",
+        specs: "Vectores Matemáticos Hash • Cero Fotos Crudas",
+        desc: "Cumplimiento estricto de protección de datos: el sistema convierte los rasgos en vectores numéricos cifrados sin almacenar fotografías personales vulneradas."
+      },
+      {
+        title: "Capa 4: Integración y Analítica Preventiva",
+        specs: "Panel Web Responsivo • Reportes por Área",
+        desc: "Consolida indicadores de bienestar ergonómico, avance de capacitación y cumplimiento de EPP para la toma de decisiones en Floristería El Trigal."
+      }
+    ];
+
+    /* ==========================================================================
+       3. RENDERIZADO DE LAS 8 DIAPOSITIVAS
+       ========================================================================== */
+    const slidePanel = document.getElementById("slide-panel");
+    const slideCounter = document.getElementById("slide-counter");
+    const slidePills = document.querySelectorAll(".slide-pill");
+
+    function renderSlide(index) {
+      state.currentSlide = index;
+      slideCounter.textContent = `${index + 1} / 8`;
+
+      slidePills.forEach((pill, i) => {
+        pill.classList.toggle("active", i === index);
+      });
+
+      let html = "";
+
+      if (index === 0) {
+        /* #1 INICIO Y BIENVENIDA */
+        html = `
+          <div class="eyebrow">🌿 Bienvenida Institucional • El Carmen de Viboral</div>
+          <h1 class="slide-title">NEXFLOR <span>× Floristería El Trigal</span></h1>
+          <p class="slide-lead">
+            Ecosistema inteligente de <strong>visión artificial, ergonomía preventiva y formación interactiva</strong> diseñado a la medida para trabajadores, floristas, ingenieros y directivos de Floristería El Trigal.
+          </p>
+
+          <div class="grid-2">
+            <div class="metric-box">
+              <div class="metric-val emerald">&lt; 0.8 s</div>
+              <div class="metric-lbl">Acceso biométrico manos libres y verificación automática de EPP</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val">360° IA</div>
+              <div class="metric-lbl">Cuidado postural lumbar en tiempo real y microaprendizaje</div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <h3>Tradición Floral y Cerámica + Inteligencia Artificial</h3>
+            <p>
+              Unimos el saber artesanal de <strong>El Carmen de Viboral, Antioquia</strong> con software desarrollado en el Oriente Antioqueño para proteger la salud del talento humano y elevar la calidad operativa.
+            </p>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:6px;">
+            <button id="btn-slide1-fs" class="btn btn-gold">⛶ Iniciar Presentación en Pantalla Completa</button>
+            <button id="btn-slide1-start" class="btn btn-primary">Comenzar Recorrido →</button>
+          </div>
+        `;
+      } else if (index === 1) {
+        /* #2 FLORISTERÍA EL TRIGAL */
+        const area = trigalAreasData[state.trigalArea];
+        html = `
+          <div class="eyebrow gold">🏺 Identidad Local • El Carmen de Viboral</div>
+          <h1 class="slide-title">Floristería <span>El Trigal</span></h1>
+          <p class="slide-lead">
+            Explora cómo NEXFLOR se integra en las <strong>4 áreas clave</strong> de operación, respetando la esencia artesanal y floral del territorio.
+          </p>
+
+          <div class="tab-row">
+            <button class="tab-btn ${state.trigalArea === 0 ? "active" : ""}" data-area="0">Cultivo y Poscosecha</button>
+            <button class="tab-btn ${state.trigalArea === 1 ? "active" : ""}" data-area="1">Diseño Floral y Ramos</button>
+            <button class="tab-btn ${state.trigalArea === 2 ? "active" : ""}" data-area="2">Cerámica y Empaque</button>
+            <button class="tab-btn ${state.trigalArea === 3 ? "active" : ""}" data-area="3">Calidad y Despacho</button>
+          </div>
+
+          <div class="detail-card">
+            <h3>${area.title}</h3>
+            <p>${area.desc}</p>
+            <ul class="bullet-list">
+              ${area.bullets.map((b) => `<li>${b}</li>`).join("")}
+            </ul>
+          </div>
+        `;
+      } else if (index === 2) {
+        /* #3 VALOR PARA CADA PERSONA EN EL TRIGAL */
+        const p = personasData[state.personaIndex];
+        html = `
+          <div class="eyebrow cyan">🤝 Impacto Humano y Operativo</div>
+          <h1 class="slide-title">Valor para Cada <span>Persona en El Trigal</span></h1>
+          <p class="slide-lead">
+            Selecciona un perfil para visualizar su flujo diario con NEXFLOR y observa la red neuronal 3D conectando cada rol.
+          </p>
+
+          <div class="tab-row">
+            <button class="tab-btn ${state.personaIndex === 0 ? "active" : ""}" data-persona="0">Trabajadores y Floristas</button>
+            <button class="tab-btn ${state.personaIndex === 1 ? "active" : ""}" data-persona="1">Ingenieros y Técnica</button>
+            <button class="tab-btn ${state.personaIndex === 2 ? "active" : ""}" data-persona="2">Directivos y Visitantes</button>
+          </div>
+
+          <div class="detail-card">
+            <div class="eyebrow" style="margin-bottom:8px;">${p.badge}</div>
+            <h3>${p.role}</h3>
+            <p>${p.summary}</p>
+            <ul class="bullet-list">
+              ${p.flow.map((item) => `<li>${item}</li>`).join("")}
+            </ul>
+          </div>
+        `;
+      } else if (index === 3) {
+        /* #4 NEXFLOR ID (SIMULADOR BIOMÉTRICO Y EPP) */
+        const allEppOk = state.epp.guantes && state.epp.delantal && state.epp.gafas;
+        let statusHtml = `<span style="color:var(--text-muted);">Listo para iniciar escaneo biométrico y de EPP.</span>`;
+        if (state.scanning) {
+          statusHtml = `<span style="color:var(--cyan); font-weight:700;">Escaneando malla facial 3D y verificando EPP... ${Math.round(state.scanProgress)}%</span>`;
+        } else if (state.scanCompleted) {
+          statusHtml = allEppOk
+            ? `<span style="color:var(--emerald-light); font-weight:700;">✔ Acceso Autorizado en 0.74 s — Identidad y EPP Completos</span>`
+            : `<span style="color:var(--gold-light); font-weight:700;">⚠ Identidad Verificada (0.74 s) — Alerta: Falta EPP obligatorio</span>`;
+        }
+
+        html = `
+          <div class="eyebrow cyan">🪪 Módulo 1 • Visión Artificial sin Contacto</div>
+          <h1 class="slide-title">NEXFLOR <span>ID</span></h1>
+          <p class="slide-lead">
+            Simulador manos libres de reconocimiento facial y verificación automática de Elementos de Protección Personal (EPP) en <strong>&lt; 0.8 segundos</strong>.
+          </p>
+
+          <div class="detail-card">
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">
+              Simula el estado de EPP del colaborador (haz clic para activar/desactivar):
+            </div>
+            <div class="epp-toggles">
+              <button class="epp-chip ${state.epp.guantes ? "" : "missing"}" data-epp="guantes">
+                ${state.epp.guantes ? "✔" : "✕"} Guantes de Poda
+              </button>
+              <button class="epp-chip ${state.epp.delantal ? "" : "missing"}" data-epp="delantal">
+                ${state.epp.delantal ? "✔" : "✕"} Delantal Impermeable
+              </button>
+              <button class="epp-chip ${state.epp.gafas ? "" : "missing"}" data-epp="gafas">
+                ${state.epp.gafas ? "✔" : "✕"} Gafas Protectoras
+              </button>
+            </div>
+
+            <div class="progress-track">
+              <div class="progress-fill" style="width:${state.scanProgress}%"></div>
+            </div>
+            <div style="font-size:0.84rem; margin-bottom:12px;">${statusHtml}</div>
+
+            <button id="btn-run-scan" class="btn btn-primary">
+              ${state.scanning ? "⏳ Escaneando..." : "▶ Iniciar Escaneo Biométrico"}
+            </button>
+          </div>
+        `;
+      } else if (index === 4) {
+        /* #5 NEXFLOR ACADEMY (CHECKLIST + RETO EN VIVO) */
+        const modulesList = [
+          "Módulo 1: Hidratación y corte limpio en poscosecha",
+          "Módulo 2: Manipulación segura de cerámica artesanal",
+          "Módulo 3: Pausas activas y estiramiento de muñecas",
+          "Módulo 4: Clasificación y control de calidad exportable"
+        ];
+        const doneCount = state.academyModules.filter(Boolean).length;
+        const score = state.quizAnswers.reduce((acc, ans, idx) => acc + (ans === quizQuestions[idx].correct ? 1 : 0), 0);
+        const answeredCount = state.quizAnswers.filter((a) => a !== null).length;
+
+        html = `
+          <div class="eyebrow gold">🎓 Módulo 2 • Microaprendizaje Interactivo</div>
+          <h1 class="slide-title">NEXFLOR <span>ACADEMY</span></h1>
+          <p class="slide-lead">
+            Capacitación práctica en cápsulas de 2 minutos y evaluación participativa en vivo con el equipo de Floristería El Trigal.
+          </p>
+
+          <div class="detail-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h3>Rutas de Microaprendizaje</h3>
+              <span style="font-size:0.8rem; color:var(--emerald-light); font-weight:700;">${doneCount}/4 completados</span>
+            </div>
+            ${modulesList.map((m, i) => `
+              <div class="check-item ${state.academyModules[i] ? "done" : ""}" data-mod="${i}">
+                <span>${state.academyModules[i] ? "✅" : "⬜"}</span>
+                <span>${m}</span>
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="detail-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h3>Reto en Vivo (3 Preguntas)</h3>
+              <span style="font-size:0.8rem; color:var(--gold-light); font-weight:700;">Puntaje: ${score}/3</span>
+            </div>
+            ${quizQuestions.map((item, qIdx) => `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:0.83rem; font-weight:600; margin-bottom:5px; color:var(--text-main);">${item.q}</div>
+                ${item.options.map((opt, oIdx) => {
+                  let cls = "quiz-option";
+                  if (state.quizAnswers[qIdx] !== null) {
+                    if (oIdx === item.correct) cls += " correct";
+                    else if (state.quizAnswers[qIdx] === oIdx) cls += " wrong";
+                  }
+                  return `<button class="${cls}" data-q="${qIdx}" data-o="${oIdx}">${opt}</button>`;
+                }).join("")}
+              </div>
+            `).join("")}
+            ${answeredCount === 3 ? `<div style="font-size:0.84rem; color:var(--emerald-light); font-weight:700;">🎉 ¡Reto finalizado! Resultado: ${score} de 3 respuestas correctas.</div>` : ""}
+          </div>
+        `;
+      } else if (index === 5) {
+        /* #6 NEXFLOR POSTURE (CONTROL LUMBAR 0° - 45°) */
+        const ang = state.lumbarAngle;
+        let riskLabel = "Postura Óptima • Zona Segura";
+        let riskColor = "#10b981";
+        let advice = "Columna alineada. Carga discal mínima en mesas de clasificación y armado.";
+        if (ang >= 20 && ang < 32) {
+          riskLabel = "Alerta Preventiva • Inclinación Moderada";
+          riskColor = "#f59e0b";
+          advice = "Se sugiere ajustar la altura de la mesa de trabajo o realizar micro-pausa de extensión lumbar.";
+        } else if (ang >= 32) {
+          riskLabel = "Riesgo Lumbar Alto • Alerta Ergonómica";
+          riskColor = "#ef4444";
+          advice = "Sobrecarga en zona L4-L5. Flexiona rodillas y acerca el ramo o pieza cerámica al tronco.";
+        }
+
+        // Cálculo de coordenadas para silueta SVG ergonómica
+        const rad = (ang * Math.PI) / 180;
+        const hipX = 48, hipY = 78;
+        const shoulderX = hipX + Math.sin(rad) * 42;
+        const shoulderY = hipY - Math.cos(rad) * 42;
+        const headX = shoulderX + Math.sin(rad) * 14;
+        const headY = shoulderY - Math.cos(rad) * 14;
+
+        html = `
+          <div class="eyebrow">🦴 Módulo 3 • Salud Osteomuscular</div>
+          <h1 class="slide-title">NEXFLOR <span>POSTURE</span></h1>
+          <p class="slide-lead">
+            Desliza el control de inclinación lumbar (<strong>0° a 45°</strong>) para observar la respuesta sincronizada en la silueta ergonómica y la columna 3D.
+          </p>
+
+          <div class="detail-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:0.85rem; font-weight:700;">Ángulo de Inclinación Lumbar:</span>
+              <span style="font-size:1.3rem; font-weight:800; color:${riskColor};">${ang}°</span>
+            </div>
+            <input id="lumbar-slider" class="range-input" type="range" min="0" max="45" value="${ang}" />
+
+            <div class="tab-row" style="margin-top:6px;">
+              <button class="tab-btn" data-preset="8">Óptima (8°)</button>
+              <button class="tab-btn" data-preset="25">Alerta (25°)</button>
+              <button class="tab-btn" data-preset="40">Riesgo (40°)</button>
+            </div>
+
+            <div class="posture-flex">
+              <svg width="96" height="115" viewBox="0 0 110 125" aria-label="Silueta ergonómica lumbar">
+                <line x1="15" y1="112" x2="95" y2="112" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+                <!-- Piernas -->
+                <line x1="${hipX}" y1="${hipY}" x2="44" y2="112" stroke="#94a3b8" stroke-width="6" stroke-linecap="round" />
+                <line x1="${hipX}" y1="${hipY}" x2="56" y2="112" stroke="#64748b" stroke-width="6" stroke-linecap="round" />
+                <!-- Línea guía vertical -->
+                <line x1="${hipX}" y1="${hipY}" x2="${hipX}" y2="20" stroke="rgba(255,255,255,0.22)" stroke-dasharray="3,3" stroke-width="1.5" />
+                <!-- Columna articulada -->
+                <line x1="${hipX}" y1="${hipY}" x2="${shoulderX.toFixed(1)}" y2="${shoulderY.toFixed(1)}" stroke="${riskColor}" stroke-width="7" stroke-linecap="round" />
+                <!-- Cabeza -->
+                <circle cx="${headX.toFixed(1)}" cy="${headY.toFixed(1)}" r="9" fill="${riskColor}" />
+              </svg>
+              <div>
+                <div style="font-size:0.92rem; font-weight:800; color:${riskColor}; margin-bottom:4px;">${riskLabel}</div>
+                <p style="margin:0; font-size:0.83rem;">${advice}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (index === 6) {
+        /* #7 ARQUITECTURA E INGENIERÍA */
+        const layer = archLayersData[state.archLayer];
+        html = `
+          <div class="eyebrow cyan">⚙️ Ingeniería de Software &amp; Edge AI</div>
+          <h1 class="slide-title">Arquitectura e <span>Ingeniería</span></h1>
+          <p class="slide-lead">
+            Diseñada con estándares modernos de visión artificial, ejecución local y protección de privacidad biométrica.
+          </p>
+
+          <div class="tab-row">
+            <button class="tab-btn ${state.archLayer === 0 ? "active" : ""}" data-arch="0">Visión Artificial</button>
+            <button class="tab-btn ${state.archLayer === 1 ? "active" : ""}" data-arch="1">Edge &amp; Offline</button>
+            <button class="tab-btn ${state.archLayer === 2 ? "active" : ""}" data-arch="2">Privacidad Cifrada</button>
+            <button class="tab-btn ${state.archLayer === 3 ? "active" : ""}" data-arch="3">Analítica</button>
+          </div>
+
+          <div class="detail-card">
+            <div class="eyebrow gold" style="margin-bottom:8px;">${layer.specs}</div>
+            <h3>${layer.title}</h3>
+            <p>${layer.desc}</p>
+          </div>
+
+          <div class="grid-2">
+            <div class="metric-box">
+              <div class="metric-val cyan">30 FPS</div>
+              <div class="metric-lbl">Inferencia fluida en cámaras web estándar</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-val emerald">100%</div>
+              <div class="metric-lbl">Resiliencia ante desconexión de red</div>
+            </div>
+          </div>
+        `;
+      } else if (index === 7) {
+        /* #8 HOJA DE RUTA Y EQUIPO */
+        html = `
+          <div class="eyebrow gold">🚀 Implementación y Talento Regional</div>
+          <h1 class="slide-title">Hoja de Ruta y <span>Equipo</span></h1>
+          <p class="slide-lead">
+            Plan escalonado de adopción en <strong>Floristería El Trigal</strong> desarrollado por jóvenes talentos del Oriente Antioqueño.
+          </p>
+
+          <div class="detail-card">
+            <h3>Fases de Implementación en El Trigal</h3>
+            <ul class="bullet-list">
+              <li><strong>Fase 1 (Semanas 1-3):</strong> Piloto en estación de poscosecha, calibración lumínica y registro biométrico inicial.</li>
+              <li><strong>Fase 2 (Semanas 4-6):</strong> Activación de alertas ergonómicas NEXFLOR POSTURE y cápsulas en NEXFLOR ACADEMY.</li>
+              <li><strong>Fase 3 (Mes 2+):</strong> Consolidación de indicadores preventivos y escalamiento a todas las áreas del taller.</li>
+            </ul>
+          </div>
+
+          <div class="detail-card" style="margin-bottom:0;">
+            <h3>Equipo Desarrollador</h3>
+            <p style="margin-bottom:8px;">
+              <strong>Grado 11A — Institución Educativa Rural Santa María</strong> &amp; <strong>SENA Media Técnica en Programación y Desarrollo de Software</strong> (La Ceja, Antioquia).
+            </p>
+            <div class="team-grid">
+              <div class="team-card">
+                <div class="team-name">Alejandro Lopera Villada</div>
+                <div class="team-role">Arquitectura &amp; Desarrollo Full-Stack</div>
+              </div>
+              <div class="team-card">
+                <div class="team-name">Juan Camilo Tobón</div>
+                <div class="team-role">Visión Artificial &amp; Lógica 3D</div>
+              </div>
+              <div class="team-card">
+                <div class="team-name">Emiliano Castañeda</div>
+                <div class="team-role">Ingeniería de Datos &amp; Pruebas</div>
+              </div>
+              <div class="team-card">
+                <div class="team-name">Luisa Marulanda</div>
+                <div class="team-role">Experiencia de Usuario &amp; Diseño</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      slidePanel.innerHTML = html;
+      bindSlideEvents();
+      if (window.update3DSceneForSlide) {
+        window.update3DSceneForSlide(index);
+      }
+    }
+
+    function bindSlideEvents() {
+      const btnS1Fs = document.getElementById("btn-slide1-fs");
+      if (btnS1Fs) btnS1Fs.addEventListener("click", requestAppFullscreen);
+
+      const btnS1Start = document.getElementById("btn-slide1-start");
+      if (btnS1Start) btnS1Start.addEventListener("click", () => renderSlide(1));
+
+      document.querySelectorAll("[data-area]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.trigalArea = Number(btn.dataset.area);
+          renderSlide(1);
+        });
+      });
+
+      document.querySelectorAll("[data-persona]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.personaIndex = Number(btn.dataset.persona);
+          renderSlide(2);
+        });
+      });
+
+      document.querySelectorAll("[data-epp]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const key = btn.dataset.epp;
+          state.epp[key] = !state.epp[key];
+          renderSlide(3);
+        });
+      });
+
+      const btnRunScan = document.getElementById("btn-run-scan");
+      if (btnRunScan) {
+        btnRunScan.addEventListener("click", () => {
+          if (state.scanning) return;
+          state.scanning = true;
+          state.scanCompleted = false;
+          state.scanProgress = 0;
+          renderSlide(3);
+
+          const interval = setInterval(() => {
+            state.scanProgress += 12.5;
+            if (state.scanProgress >= 100) {
+              state.scanProgress = 100;
+              state.scanning = false;
+              state.scanCompleted = true;
+              clearInterval(interval);
+            }
+            renderSlide(3);
+          }, 85);
+        });
+      }
+
+      document.querySelectorAll("[data-mod]").forEach((item) => {
+        item.addEventListener("click", () => {
+          const idx = Number(item.dataset.mod);
+          state.academyModules[idx] = !state.academyModules[idx];
+          renderSlide(4);
+        });
+      });
+
+      document.querySelectorAll("[data-q]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const qIdx = Number(btn.dataset.q);
+          const oIdx = Number(btn.dataset.o);
+          state.quizAnswers[qIdx] = oIdx;
+          renderSlide(4);
+        });
+      });
+
+      const slider = document.getElementById("lumbar-slider");
+      if (slider) {
+        slider.addEventListener("input", (e) => {
+          state.lumbarAngle = Number(e.target.value);
+          renderSlide(5);
+        });
+      }
+
+      document.querySelectorAll("[data-preset]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.lumbarAngle = Number(btn.dataset.preset);
+          renderSlide(5);
+        });
+      });
+
+      document.querySelectorAll("[data-arch]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.archLayer = Number(btn.dataset.arch);
+          renderSlide(6);
+        });
+      });
+    }
+
+    /* ==========================================================================
+       4. NAVEGACIÓN GLOBAL (CLICS, TECLADO ← / → / F, MODO EXPLORAR 3D)
+       ========================================================================== */
+    slidePills.forEach((pill) => {
+      pill.addEventListener("click", () => {
+        renderSlide(Number(pill.dataset.slide));
+      });
+    });
+
+    document.getElementById("btn-prev").addEventListener("click", () => {
+      const prev = (state.currentSlide - 1 + 8) % 8;
+      renderSlide(prev);
+    });
+
+    document.getElementById("btn-next").addEventListener("click", () => {
+      const next = (state.currentSlide + 1) % 8;
+      renderSlide(next);
+    });
+
+    const btnExplore3D = document.getElementById("btn-explore-3d");
+    btnExplore3D.addEventListener("click", () => {
+      state.explore3D = !state.explore3D;
+      document.body.classList.toggle("explore-3d-mode", state.explore3D);
+      btnExplore3D.innerHTML = state.explore3D
+        ? "📋 Mostrar Paneles"
+        : "👁 Explorar 3D (Ocultar Paneles)";
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowRight") {
+        renderSlide((state.currentSlide + 1) % 8);
+      } else if (e.key === "ArrowLeft") {
+        renderSlide((state.currentSlide - 1 + 8) % 8);
+      } else if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
+      }
+    });
+
+    /* ==========================================================================
+       5. MOTOR 3D DUAL AUTOCONTENIDO (THREE.JS r128 + RESPALDO CANVAS 3D NATIVO)
+       ========================================================================== */
+    (function initDual3DEngine() {
+      const container = document.getElementById("scene-container");
+      const statusLabel = document.getElementById("engine-status-label");
+
+      // Variables compartidas de cámara interactiva (ratón + táctil)
+      let targetRotY = 0.35;
+      let targetRotX = 0.12;
+      let currentRotY = 0.35;
+      let currentRotX = 0.12;
+      let targetZoom = 1.0;
+      let currentZoom = 1.0;
+      let isDragging = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      container.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        targetRotY += dx * 0.008;
+        targetRotX = Math.max(-0.85, Math.min(0.85, targetRotX + dy * 0.006));
+      });
+      window.addEventListener("mouseup", () => { isDragging = false; });
+
+      container.addEventListener("touchstart", (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          lastX = e.touches[0].clientX;
+          lastY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+      container.addEventListener("touchmove", (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - lastX;
+        const dy = e.touches[0].clientY - lastY;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+        targetRotY += dx * 0.009;
+        targetRotX = Math.max(-0.85, Math.min(0.85, targetRotX + dy * 0.007));
+      }, { passive: true });
+      window.addEventListener("touchend", () => { isDragging = false; });
+
+      container.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        targetZoom = Math.max(0.65, Math.min(1.65, targetZoom - e.deltaY * 0.0008));
+      }, { passive: false });
+
+      /* ------------------------------------------------------------------------
+         OPCIÓN A: MOTOR WEBGL CON THREE.JS r128
+         ------------------------------------------------------------------------ */
+      if (typeof THREE !== "undefined") {
+        statusLabel.textContent = "Motor WebGL 3D (Three.js) Activo • Arrastra para rotar";
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0.4, 8.2);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // Iluminación botánica de estudio
+        const ambientLight = new THREE.AmbientLight(0xd1fae5, 0.75);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.PointLight(0x10b981, 2.2, 30);
+        keyLight.position.set(5, 6, 6);
+        scene.add(keyLight);
+
+        const goldLight = new THREE.PointLight(0xf59e0b, 1.8, 30);
+        goldLight.position.set(-5, -3, 5);
+        scene.add(goldLight);
+
+        const cyanLight = new THREE.PointLight(0x38bdf8, 1.4, 25);
+        cyanLight.position.set(0, 5, -5);
+        scene.add(cyanLight);
+
+        // Campo de partículas ambientales (polen luminoso)
+        const partCount = 240;
+        const partGeo = new THREE.BufferGeometry();
+        const partPos = new Float32Array(partCount * 3);
+        for (let i = 0; i < partCount * 3; i++) {
+          partPos[i] = (Math.random() - 0.5) * 18;
+        }
+        partGeo.setAttribute("position", new THREE.BufferAttribute(partPos, 3));
+        const partMat = new THREE.PointsMaterial({ color: 0x34d399, size: 0.055, transparent: true, opacity: 0.65 });
+        const particles = new THREE.Points(partGeo, partMat);
+        scene.add(particles);
+
+        // Grupo principal desplazado ligeramente a la derecha en pantallas panorámicas
+        const rootGroup = new THREE.Group();
+        scene.add(rootGroup);
+
+        function updateRootOffset() {
+          rootGroup.position.x = window.innerWidth > 820 ? 1.85 : 0;
+          rootGroup.position.y = window.innerWidth > 820 ? 0.1 : 1.35;
+        }
+        updateRootOffset();
+
+        const slideGroups = [];
+        let laserPlane = null;
+        let spineSegments = [];
+
+        // Materiales compartidos
+        const matEmerald = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.28, metalness: 0.35 });
+        const matGold = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.25, metalness: 0.65 });
+        const matCyan = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.25, metalness: 0.45 });
+        const matWireEmerald = new THREE.MeshBasicMaterial({ color: 0x34d399, wireframe: true, transparent: true, opacity: 0.45 });
+        const matWireCyan = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true, transparent: true, opacity: 0.5 });
+
+        // #0 Escultura Botánica + Anillo Dorado (Inicio)
+        const g0 = new THREE.Group();
+        const core0 = new THREE.Mesh(new THREE.OctahedronGeometry(0.65, 1), matGold);
+        g0.add(core0);
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2;
+          const petal = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.35, 6), i % 2 === 0 ? matEmerald : matCyan);
+          petal.position.set(Math.cos(angle) * 1.15, Math.sin(angle) * 1.15, 0);
+          petal.rotation.z = angle - Math.PI / 2;
+          g0.add(petal);
+        }
+        const torus0 = new THREE.Mesh(new THREE.TorusGeometry(2.05, 0.045, 16, 80), matGold);
+        g0.add(torus0);
+        slideGroups.push(g0);
+
+        // #1 Jarrón Artesanal Carmelitano + Tallo Floral (El Trigal)
+        const g1 = new THREE.Group();
+        const lathePts = [
+          new THREE.Vector2(0.0, -1.5),
+          new THREE.Vector2(0.75, -1.5),
+          new THREE.Vector2(1.15, -0.5),
+          new THREE.Vector2(0.95, 0.4),
+          new THREE.Vector2(0.55, 1.0),
+          new THREE.Vector2(0.72, 1.35)
+        ];
+        const vase = new THREE.Mesh(new THREE.LatheGeometry(lathePts, 32), matGold);
+        const vaseWire = new THREE.Mesh(new THREE.LatheGeometry(lathePts, 18), matWireEmerald);
+        vaseWire.scale.setScalar(1.03);
+        g1.add(vase, vaseWire);
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          const bloom = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28, 0), i % 2 === 0 ? matEmerald : matCyan);
+          bloom.position.set(Math.cos(a) * 0.45, 1.75 + (i % 2) * 0.25, Math.sin(a) * 0.45);
+          g1.add(bloom);
+        }
+        slideGroups.push(g1);
+
+        // #2 Red Interconectada de Valor (3 Nodos Principales + Satélites)
+        const g2 = new THREE.Group();
+        const nodePositions = [
+          [0, 1.35, 0],
+          [-1.35, -0.95, 0.6],
+          [1.35, -0.95, -0.6],
+          [0, 0, 1.2],
+          [0, 0, -1.2]
+        ];
+        nodePositions.forEach((pos, idx) => {
+          const sphere = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(idx < 3 ? 0.45 : 0.28, 1),
+            idx === 0 ? matEmerald : idx === 1 ? matGold : matCyan
+          );
+          sphere.position.set(...pos);
+          g2.add(sphere);
+        });
+        const netHull = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 1), matWireEmerald);
+        g2.add(netHull);
+        slideGroups.push(g2);
+
+        // #3 Malla Facial Biométrica 3D + Láser Escáner (NEXFLOR ID)
+        const g3 = new THREE.Group();
+        const faceMesh = new THREE.Mesh(new THREE.SphereGeometry(1.45, 18, 18), matWireCyan);
+        faceMesh.scale.set(0.85, 1.18, 0.9);
+        g3.add(faceMesh);
+        laserPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(3.1, 0.08),
+          new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide })
+        );
+        g3.add(laserPlane);
+        slideGroups.push(g3);
+
+        // #4 Anillos Orbitales de Conocimiento (NEXFLOR ACADEMY)
+        const g4 = new THREE.Group();
+        const acadCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.7, 0), matGold);
+        g4.add(acadCore);
+        [1.35, 1.75, 2.15].forEach((r, idx) => {
+          const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(r, 0.04, 16, 64),
+            idx === 0 ? matEmerald : idx === 1 ? matCyan : matGold
+          );
+          ring.rotation.x = idx * 0.65;
+          ring.rotation.y = idx * 0.45;
+          g4.add(ring);
+        });
+        slideGroups.push(g4);
+
+        // #5 Columna Vertebral Lumbar Articulada 3D (NEXFLOR POSTURE)
+        const g5 = new THREE.Group();
+        spineSegments = [];
+        for (let i = 0; i < 9; i++) {
+          const segMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3, metalness: 0.3 });
+          const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.42 - i * 0.015, 0.45 - i * 0.015, 0.26, 16), segMat);
+          seg.position.y = -1.4 + i * 0.36;
+          g5.add(seg);
+          spineSegments.push(seg);
+        }
+        slideGroups.push(g5);
+
+        // #6 Cubo Neuronal de Arquitectura Edge (Ingeniería)
+        const g6 = new THREE.Group();
+        const outerCube = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), matWireCyan);
+        const innerCube = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.15, 1.15), matEmerald);
+        const coreSphere6 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), matGold);
+        g6.add(outerCube, innerCube, coreSphere6);
+        slideGroups.push(g6);
+
+        // #7 Constelación de Hoja de Ruta y Equipo (Cierre)
+        const g7 = new THREE.Group();
+        const starCore = new THREE.Mesh(new THREE.DodecahedronGeometry(0.85, 0), matGold);
+        const starHalo = new THREE.Mesh(new THREE.TorusKnotGeometry(1.45, 0.06, 90, 12), matEmerald);
+        g7.add(starCore, starHalo);
+        slideGroups.push(g7);
+
+        slideGroups.forEach((grp, idx) => {
+          grp.visible = idx === 0;
+          rootGroup.add(grp);
+        });
+
+        window.update3DSceneForSlide = function(idx) {
+          slideGroups.forEach((grp, i) => {
+            grp.visible = i === idx;
+          });
+        };
+
+        window.addEventListener("resize", () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          updateRootOffset();
+        });
+
+        let clock = new THREE.Clock();
+        function animateThree() {
+          requestAnimationFrame(animateThree);
+          const t = clock.getElapsedTime();
+
+          if (!isDragging) {
+            targetRotY += 0.0045;
+          }
+          currentRotY += (targetRotY - currentRotY) * 0.08;
+          currentRotX += (targetRotX - currentRotX) * 0.08;
+          currentZoom += (targetZoom - currentZoom) * 0.08;
+
+          rootGroup.rotation.y = currentRotY;
+          rootGroup.rotation.x = currentRotX;
+          rootGroup.scale.setScalar(currentZoom);
+
+          particles.rotation.y = t * 0.03;
+
+          // Animaciones específicas de cada diapositiva
+          if (state.currentSlide === 3 && laserPlane) {
+            const speed = state.scanning ? 5.5 : 1.8;
+            laserPlane.position.y = Math.sin(t * speed) * 1.45;
+          }
+
+          if (state.currentSlide === 4) {
+            g4.children.forEach((child, idx) => {
+              if (idx > 0) child.rotation.z = t * (0.4 + idx * 0.2);
+            });
+          }
+
+          if (state.currentSlide === 5 && spineSegments.length) {
+            const angRad = (state.lumbarAngle * Math.PI) / 180;
+            const colorHex = state.lumbarAngle < 20 ? 0x10b981 : state.lumbarAngle < 32 ? 0xf59e0b : 0xef4444;
+            spineSegments.forEach((seg, idx) => {
+              const factor = idx / (spineSegments.length - 1);
+              seg.position.x = Math.sin(angRad * factor) * (idx * 0.24);
+              seg.position.y = -1.4 + Math.cos(angRad * factor) * (idx * 0.35);
+              seg.rotation.z = -angRad * factor;
+              seg.material.color.setHex(colorHex);
+            });
+          }
+
+          if (state.currentSlide === 6) {
+            g6.children[1].rotation.y = -t * 0.8;
+            g6.children[1].rotation.x = t * 0.5;
+          }
+
+          renderer.render(scene, camera);
+        }
+        animateThree();
+
+      } else {
+        /* ----------------------------------------------------------------------
+           OPCIÓN B: MOTOR 3D NATIVO EN HTML5 CANVAS (100% OFFLINE RESILIENTE)
+           ---------------------------------------------------------------------- */
+        statusLabel.textContent = "Motor 3D Nativo Canvas Activo • Arrastra para rotar";
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        function resizeCanvas() {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener("resize", resizeCanvas);
+
+        function project3D(x, y, z, cx, cy, scale) {
+          const cosY = Math.cos(currentRotY), sinY = Math.sin(currentRotY);
+          const cosX = Math.cos(currentRotX), sinX = Math.sin(currentRotX);
+
+          const x1 = x * cosY - z * sinY;
+          const z1 = z * cosY + x * sinY;
+          const y2 = y * cosX - z1 * sinX;
+          const z2 = z1 * cosX + y * sinX;
+
+          const fov = 420 * currentZoom;
+          const depth = fov / (fov + z2 + 260);
+          return {
+            px: cx + x1 * depth * scale,
+            py: cy + y2 * depth * scale,
+            r: Math.max(1.5, depth * 4.5)
+          };
+        }
+
+        function animateFallback3D(ms) {
+          requestAnimationFrame(animateFallback3D);
+          const t = ms * 0.001;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          if (!isDragging) targetRotY += 0.005;
+          currentRotY += (targetRotY - currentRotY) * 0.08;
+          currentRotX += (targetRotX - currentRotX) * 0.08;
+          currentZoom += (targetZoom - currentZoom) * 0.08;
+
+          const cx = canvas.width > 820 ? canvas.width * 0.72 : canvas.width * 0.5;
+          const cy = canvas.width > 820 ? canvas.height * 0.5 : canvas.height * 0.26;
+          const scale = Math.min(canvas.width, canvas.height) * 0.24;
+
+          const pts = [];
+          const count = 48;
+          for (let i = 0; i < count; i++) {
+            const u = (i / count) * Math.PI * 2;
+            let x = 0, y = 0, z = 0;
+            if (state.currentSlide === 5) {
+              // Columna vertebral curva según ángulo lumbar
+              const f = i / count;
+              const ang = (state.lumbarAngle * Math.PI) / 180;
+              x = Math.sin(ang * f) * f * 1.4;
+              y = (f - 0.5) * 2.2;
+              z = Math.cos(u * 4) * 0.22;
+            } else {
+              const mod = 1 + 0.35 * Math.sin(u * (state.currentSlide + 2) + t);
+              x = Math.cos(u) * mod;
+              y = Math.sin(u * 1.5 + t * 0.6) * 0.95;
+              z = Math.sin(u) * mod;
+            }
+            pts.push(project3D(x, y, z, cx, cy, scale));
+          }
+
+          ctx.strokeStyle = state.currentSlide === 5 && state.lumbarAngle >= 32
+            ? "rgba(239, 68, 68, 0.5)"
+            : "rgba(16, 185, 129, 0.42)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          pts.forEach((p, idx) => {
+            if (idx === 0) ctx.moveTo(p.px, p.py);
+            else ctx.lineTo(p.px, p.py);
+          });
+          ctx.closePath();
+          ctx.stroke();
+
+          pts.forEach((p, idx) => {
+            ctx.fillStyle = idx % 3 === 0 ? "#fbbf24" : "#34d399";
+            ctx.beginPath();
+            ctx.arc(p.px, p.py, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+        requestAnimationFrame(animateFallback3D);
+      }
+    })();
+
+    // Inicializar en la Diapositiva #1 al cargar
+    renderSlide(0);
+  </script>
+</body>
+</html>
