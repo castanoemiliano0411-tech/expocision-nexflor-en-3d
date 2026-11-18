@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXFLOR - Proceso de Desarrollo | Floristería El Trigal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0b061a;
+            color: #ffffff;
+            overflow-x: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Fondo 3D Canvas */
+        #canvas3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Cabecera */
+        header {
+            background: linear-gradient(90deg, #1a0b2e 0%, #2e0f45 100%);
+            border-bottom: 2px solid #9333ea;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(147, 51, 234, 0.3);
+        }
+
+        .logo-area h1 {
+            font-size: 2rem;
+            color: #c084fc;
+            text-shadow: 0 0 10px rgba(192, 132, 252, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .logo-area p {
+            font-size: 0.9rem;
+            color: #a78bfa;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .badge {
+            background-color: #3b82f6;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .fs-btn {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .fs-btn:hover {
+            background: #9333ea;
+            transform: scale(1.05);
+        }
+
+        /* Contenedor Principal / Diapositivas */
+        main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .slide-container {
+            background: rgba(18, 10, 35, 0.95);
+            border: 2px solid #7c3aed;
+            border-radius: 20px;
+            padding: 30px 40px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 0 40px rgba(124, 58, 237, 0.5);
+            backdrop-filter: blur(15px);
+            min-height: 550px;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .slide-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slide-number {
+            color: #38bdf8;
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .slide-title {
+            font-size: 2.2rem;
+            color: #ffffff;
+            margin-bottom: 15px;
+            line-height: 1.1;
+        }
+
+        .slide-text {
+            font-size: 1.2rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .slide-image-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid #9333ea;
+            background-color: rgba(0,0,0,0.3);
+            max-height: 400px;
+        }
+
+        .slide-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Controles de Navegación */
+        footer {
+            background: #0f0724;
+            border-top: 1px solid #4c1d95;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.5);
+        }
+
+        .counter-indicator {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #c084fc;
+        }
+    </style>
+    <!-- Three.js para efectos 3D de fondo -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <canvas id="canvas3d"></canvas>
+
+    <header>
+        <div class="logo-area">
+            <h1>NEXFLOR</h1>
+            <p>Floristería El Trigal - Proceso de Desarrollo</p>
+        </div>
+        <div class="header-right">
+            <button class="fs-btn" onclick="toggleFullScreen()">⛶ Pantalla Completa</button>
+            <div class="badge">Grado 11</div>
+        </div>
+    </header>
+
+    <main>
+        <div class="slide-container" id="slideBox">
+            <div class="slide-content">
+                <div class="slide-number" id="sNum">Diapositiva 1 de 15</div>
+                <h2 class="slide-title" id="sTitle">Cargando proyecto...</h2>
+                <p class="slide-text" id="sText">Espere un momento.</p>
+            </div>
+            <div class="slide-image-wrapper" id="imgWrapper">
+                <img src="" alt="" class="slide-image" id="sImg">
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <button class="nav-btn" onclick="prevSlide()">Anterior</button>
+        <div class="counter-indicator" id="indicator">1 / 15</div>
+        <button class="nav-btn" onclick="nextSlide()">Siguiente</button>
+    </footer>
+
+    <script>
+        const slides = [
+            {
+                num: "Diapositiva 1 de 15",
+                title: "Introducción al Proyecto NEXFLOR",
+                text: "NEXFLOR es una plataforma tecnológica creada desde cero para dar solución integral a las necesidades operativas de Floristería El Trigal. El proyecto se estructura en tres módulos clave: NEXFLOR ID, NEXFLOR Posture y NEXFLOR Academy.",
+                img: "image_2.png"
+            },
+            {
+                num: "Diapositiva 2 de 15",
+                title: "Planteamiento del Problema y Alcance",
+                text: "Identificamos la necesidad de modernizar procesos manuales y repetitivos en la floricultura. El objetivo fue desarrollar una interfaz interactiva en 3D que optimizara el flujo de trabajo, garantizando la seguridad y el bienestar de los colaboradores desde el ingreso hasta la producción final.",
+                img: "image_3.png"
+            },
+            {
+                num: "Diapositiva 3 de 15",
+                title: "Arquitectura y Tecnologías de Desarrollo",
+                text: "La aplicación fue construida utilizando un stack web nativo y eficiente: HTML5 para la estructura semántica, CSS3 avanzado para la interfaz gráfica responsiva y animaciones fluidas, y JavaScript moderno para la lógica de interacción y el control de la visualización 3D.",
+                img: ""
+            },
+            {
+                num: "Diapositiva 4 de 15",
+                title: "Módulo 1: NEXFLOR ID - Fundamentos",
+                text: "Este módulo es la puerta de entrada al sistema. Diseñamos una base de datos digital para el registro único de cada operario, garantizando la trazabilidad y seguridad de la información del personal que labora diariamente en los distintos frentes de trabajo de la floristería.",
+                img: "image_2.png"
+            },
+            {
+                num: "Diapositiva 5 de 15",
+                title: "Implementación de NEXFLOR ID",
+                text: "Programamos la lógica de autenticación que permite al personal ingresar al sistema mediante identificadores únicos. Esto facilita el control de asistencia, el seguimiento de roles y la personalización de la experiencia de usuario dentro de la plataforma NEXFLOR.",
+                img: "image_5.png"
+            },
+            {
+                num: "Diapositiva 6 de 15",
+                title: "Módulo 2: NEXFLOR Posture - Ergonomía",
+                text: "El riesgo ergonómico es alto en la floricultura. NEXFLOR Posture surgió para monitorear y corregir posturas en las mesas de trabajo. A través de visuales, educamos sobre la inclinación correcta de la espalda y la manipulación segura de cargas, previniendo lesiones lumbares crónicas.",
+                img: "image_4.png"
+            },
+            {
+                num: "Diapositiva 7 de 15",
+                title: "Lógica y Visuales de NEXFLOR Posture",
+                text: "Desarrollamos algoritmos conceptuales que evalúan ángulos y tiempos de exposición a malas posturas. La interfaz muestra advertencias visuales en tiempo real para que el operario pueda ajustar su posición inmediatamente mientras realiza labores de armado y empaque.",
+                img: "image_9.png"
+            },
+            {
+                num: "Diapositiva 8 de 15",
+                title: "Módulo 3: NEXFLOR Academy - Capacitación",
+                text: "NEXFLOR Academy es el centro de formación digital de la aplicación. Creamos una biblioteca de contenidos interactivos donde los colaboradores acceden a tutoriales sobre el uso correcto de EPP (Elementos de Protección Personal), manejo de herramientas y primeros auxilios.",
+                img: "image_6.png"
+            },
+            {
+                num: "Diapositiva 9 de 15",
+                title: "Estructura de Contenidos en Academy",
+                text: "Programamos el sistema de módulos educativos, incluyendo evaluaciones cortas para verificar el conocimiento adquirido. Esto asegura que el personal esté certificado y capacitado en los protocolos de seguridad industrial antes de iniciar sus actividades en planta.",
+                img: ""
+            },
+            {
+                num: "Diapositiva 10 de 15",
+                title: "Desarrollo de la Interfaz Visual y Gráficos 3D",
+                text: "La interfaz se diseñó pensando en la usabilidad en ambientes industriales. Utilizamos degradados profundos y efectos de cristalería (backdrop-filter) para una estética profesional. Integramos Three.js para renderizar elementos tridimensionales interactivos que demuestran los conceptos clave de ergonomía sin saturar la pantalla.",
+                img: ""
+            },
+            {
+                num: "Diapositiva 11 de 15",
+                title: "Control de Versiones y Despliegue Continuo",
+                text: "Todo el código fuente fue gestionado mediante control de versiones en GitHub, lo que nos permitió mantener un historial ordenado y trabajar en equipo. El despliegue de la aplicación en la nube se realizó de forma automatizada a través de la plataforma Vercel, asegurando disponibilidad inmediata en cualquier dispositivo.",
+                img: ""
+            },
+            {
+                num: "Diapositiva 12 de 15",
+                title: "Validación y Pruebas de Campo",
+                text: "Durante el desarrollo, realizamos pruebas de usabilidad directamente en los puestos de trabajo de Floristería El Trigal. Esto fue fundamental para ajustar el tamaño de los textos, el contraste de la interfaz y la rapidez de respuesta de la navegación en las tablets y televisores de la empresa.",
+                img: ""
+            },
+            {
+                num: "Diapositiva 13 de 15",
+                title: "Resultados e Impacto Operativo",
+                text: "La implementación de NEXFLOR ha permitido una mayor eficiencia en el control de personal, una reducción significativa en las posturas de riesgo en poscosecha y empaque, y una capacitación más rápida y efectiva del personal nuevo, elevando los estándares de seguridad de la empresa.",
+                img: ""
+            },
+            {
+                num: "Diapositiva 14 de 15",
+                title: "Proyecciones y Futuras Mejoras",
+                text: "El sistema es escalable. Las próximas fases incluyen la integración de sensores IoT para reportes automáticos de ergonomía, la conexión a bases de datos relacionales para el historial completo de operarios y la expansión de Academy hacia nuevas líneas de producción floral.",
+                img: ""
+            },
+            {
+                num: "Diapositiva 15 de 15",
+                title: "Conclusiones y Agradecimientos",
+                text: "NEXFLOR demuestra que la programación web de grado 11 puede resolver problemas reales de la agroindustria. Agradecemos profundamente a Floristería El Trigal por abrirnos sus puertas y a nuestros docentes por la guía técnica en este proceso de formación.",
+                img: ""
+            }
+        ];
+
+        let currentSlide = 0;
+        const slideBox = document.getElementById('slideBox');
+        const imgWrapper = document.getElementById('imgWrapper');
+
+        function updateSlide() {
+            const slide = slides[currentSlide];
+            document.getElementById('sNum').innerText = slide.num;
+            document.getElementById('sTitle').innerText = slide.title;
+            document.getElementById('sText').innerText = slide.text;
+            document.getElementById('indicator').innerText = `${currentSlide + 1} / 15`;
+
+            const sImg = document.getElementById('sImg');
+            if (slide.img && slide.img !== "") {
+                sImg.src = slide.img;
+                sImg.alt = slide.title;
+                imgWrapper.style.display = 'flex';
+            } else {
+                sImg.src = "";
+                sImg.alt = "";
+                imgWrapper.style.display = 'none';
+            }
+
+            if (slide.img && slide.img !== "") {
+                slideBox.style.gridTemplateColumns = '1fr 1.2fr';
+            } else {
+                slideBox.style.gridTemplateColumns = '1fr';
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                updateSlide();
+            } else {
+                currentSlide = 0;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            } else {
+                currentSlide = slides.length - 1;
+                updateSlide();
+            }
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Error al intentar modo pantalla completa: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        updateSlide();
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const geometries = [
+            new THREE.IcosahedronGeometry(1.5, 0),
+            new THREE.BoxGeometry(1.8, 1.8, 1.8),
+            new THREE.OctahedronGeometry(1.6, 0)
+        ];
+
+        const shapes = [];
+        for (let i = 0; i < 25; i++) {
+            const geom = geometries[Math.floor(Math.random() * geometries.length)];
+            const color = Math.random() > 0.5 ? 0x7c3aed : 0x3b82f6;
+            const material = new THREE.MeshStandardMaterial({ 
+                color: color, 
+                wireframe: true,
+                roughness: 0.4
+            });
+            const mesh = new THREE.Mesh(geom, material);
+            
+            mesh.position.set(
+                (Math.random() - 0.5) * 35,
+                (Math.random() - 0.5) * 35,
+                (Math.random() - 0.5) * 35 - 10
+            );
+            
+            scene.add(mesh);
+            shapes.push(mesh);
+        }
+
+        const light = new THREE.PointLight(0xffffff, 2, 50);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+
+        const ambientLight = new THREE.AmbientLight(0x4a044e);
+        scene.add(ambientLight);
+
+        camera.position.z = 15;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            shapes.forEach(shape => {
+                shape.rotation.x += 0.005;
+                shape.rotation.y += 0.007;
+            });
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
